@@ -45,9 +45,16 @@ class InvoiceLineCreateSerializer(serializers.Serializer):
         )
 
 
+# billing/api/serializers.py
+
 class InvoiceSerializer(serializers.ModelSerializer):
     lines = InvoiceLineNestedSerializer(many=True, read_only=True)
+    total_amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
-        fields = ["id", "invoice_no", "issued_on", "lines"]
+        fields = ["id", "invoice_no", "issued_on", "lines", "total_amount"]
+
+    def get_total_amount(self, obj) -> Decimal:
+        return sum(line.liters * line.unit_price for line in obj.lines.all())
+
