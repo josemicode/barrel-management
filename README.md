@@ -22,6 +22,7 @@ Docs:
 ## Quick start (Docker)
 1) Create `.env` (you can copy from `.env.example`):
 
+
 ```bash
 cp .env.example .env
 ```
