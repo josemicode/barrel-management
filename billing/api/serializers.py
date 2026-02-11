@@ -7,6 +7,9 @@ class ProviderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Provider
         fields = ["id", "name", "address", "tax_id"]
+        
+        def has_barrels_to_bill(self, obj: Provider) -> bool:
+            return obj.has_barrels_to_bill
 
 
 class BarrelSerializer(serializers.ModelSerializer):
