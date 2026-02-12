@@ -12,6 +12,14 @@ class ProviderSerializer(serializers.ModelSerializer):
             return obj.has_barrels_to_bill
 
 
+class ProviderDetailSerializer(ProviderSerializer):
+    # devuelve SOLO los ids de los barrel relacionados
+    barrels = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta(ProviderSerializer.Meta):
+        fields = ProviderSerializer.Meta.fields + ["barrels"]
+
+
 class BarrelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Barrel

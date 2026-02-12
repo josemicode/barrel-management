@@ -7,6 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from ..models import Provider, Barrel, Invoice
 from .serializers import (
     ProviderSerializer,
+    ProviderDetailSerializer,
     BarrelSerializer,
     InvoiceSerializer,
     InvoiceLineNestedSerializer,
@@ -18,6 +19,11 @@ from .filters import InvoiceFilter
 class ProviderViewSet(viewsets.ModelViewSet):
     queryset = Provider.objects.all().order_by("id")
     serializer_class = ProviderSerializer
+    
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return ProviderDetailSerializer
+        return super().get_serializer_class()
 
 
 class BarrelViewSet(viewsets.ModelViewSet):
