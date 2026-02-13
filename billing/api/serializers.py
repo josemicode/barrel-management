@@ -68,5 +68,5 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = ["id", "invoice_no", "issued_on", "lines", "total_amount"]
 
-    def get_total_amount(self, obj) -> Decimal:
-        return sum(line.liters * line.unit_price for line in obj.lines.all())
+    def get_total_amount(self, obj) -> int:
+        return obj.calculate_total()
