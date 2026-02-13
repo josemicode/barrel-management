@@ -13,7 +13,6 @@ class ProviderSerializer(serializers.ModelSerializer):
 
 
 class ProviderDetailSerializer(ProviderSerializer):
-    # Replaced single 'barrels' list with split lists based on billed status
     billed_barrels = serializers.SerializerMethodField()
     barrels_to_bill = serializers.SerializerMethodField()
 
