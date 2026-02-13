@@ -1,25 +1,25 @@
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
-from django_filters.rest_framework import DjangoFilterBackend
 
-from ..models import Provider, Barrel, Invoice
-from .serializers import (
-    ProviderSerializer,
-    ProviderDetailSerializer,
-    BarrelSerializer,
-    InvoiceSerializer,
-    InvoiceLineNestedSerializer,
-    InvoiceLineCreateSerializer,
-)
+from ..models import Barrel, Invoice, Provider
 from .filters import InvoiceFilter
+from .serializers import (
+    BarrelSerializer,
+    InvoiceLineCreateSerializer,
+    InvoiceLineNestedSerializer,
+    InvoiceSerializer,
+    ProviderDetailSerializer,
+    ProviderSerializer,
+)
 
 
 class ProviderViewSet(viewsets.ModelViewSet):
     queryset = Provider.objects.all().order_by("id")
     serializer_class = ProviderSerializer
-    
+
     def get_serializer_class(self):
         if self.action == "retrieve":
             return ProviderDetailSerializer
@@ -34,7 +34,9 @@ class BarrelViewSet(viewsets.ModelViewSet):
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
-    queryset = Invoice.objects.prefetch_related("lines").all().order_by("-issued_on", "-id")
+    queryset = (
+        Invoice.objects.prefetch_related("lines").all().order_by("-issued_on", "-id")
+    )
     serializer_class = InvoiceSerializer
 
     filter_backends = [DjangoFilterBackend]
@@ -47,7 +49,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         request=InvoiceLineCreateSerializer,
-        responses={201: InvoiceLineNestedSerializer},
+        responses={
+            201: InvoiceLineNestedSerializer,
+            400: OpenApiResponse(description="Validation error: barrel already billed"),
+        },
     )
     @action(detail=True, methods=["post"], url_path="add-line")
     def add_line(self, request, *args, **kwargs):
