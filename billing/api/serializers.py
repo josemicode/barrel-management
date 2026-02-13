@@ -1,13 +1,15 @@
 from decimal import Decimal
+
 from rest_framework import serializers
-from ..models import Provider, Barrel, Invoice, InvoiceLine
+
+from ..models import Barrel, Invoice, InvoiceLine, Provider
 
 
 class ProviderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Provider
         fields = ["id", "name", "address", "tax_id", "has_barrels_to_bill"]
-        
+
         def has_barrels_to_bill(self, obj: Provider) -> bool:
             return obj.has_barrels_to_bill
 
@@ -64,5 +66,5 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = ["id", "invoice_no", "issued_on", "lines", "total_amount"]
 
-    def get_total_amount(self, obj) -> Decimal:
-        return sum(line.liters * line.unit_price for line in obj.lines.all())
+    def get_total_amount(self, obj) -> int:
+        return obj.calculate_total()
