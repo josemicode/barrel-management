@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from django.db import models, transaction
+from tokenize import Number
+
 from django.core.validators import MinValueValidator
+from django.db import models, transaction
 
 class BarrelQuerySet(models.QuerySet):
     
@@ -52,6 +54,9 @@ class Invoice(models.Model):
     def __str__(self) -> str:
         return self.invoice_no
 
+    def calculate_total(self) -> int:
+        return sum(line.liters * line.unit_price for line in self.lines.all())
+
     @transaction.atomic
     def add_line_for_barrel(
         self,
@@ -84,10 +89,14 @@ class Invoice(models.Model):
 class InvoiceLine(models.Model):
     
     invoice = models.ForeignKey(Invoice, related_name="lines", on_delete=models.CASCADE)
-    barrel = models.ForeignKey(Barrel, related_name="invoice_lines", on_delete=models.PROTECT)
+    barrel = models.ForeignKey(
+        Barrel, related_name="invoice_lines", on_delete=models.PROTECT
+    )
     liters = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     description = models.CharField(max_length=255)
-    unit_price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))]
+    )
 
     def __str__(self) -> str:
         return f"Line {self.id} ({self.liters} L @ {self.unit_price})"
