@@ -17,11 +17,17 @@ class ProviderSerializer(serializers.ModelSerializer):
 
 
 class ProviderDetailSerializer(ProviderSerializer):
-    # devuelve SOLO los ids de los barrel relacionados
-    barrels = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    billed_barrels = serializers.SerializerMethodField()
+    barrels_to_bill = serializers.SerializerMethodField()
 
     class Meta(ProviderSerializer.Meta):
-        fields = ProviderSerializer.Meta.fields + ["barrels"]
+        fields = ProviderSerializer.Meta.fields + ["billed_barrels", "barrels_to_bill"]
+
+    def get_billed_barrels(self, obj) -> list[int]:
+        return obj.barrels.filter(billed=True).values_list("id", flat=True)
+
+    def get_barrels_to_bill(self, obj) -> list[int]:
+        return obj.barrels.filter(billed=False).values_list("id", flat=True)
 
 
 class BarrelSerializer(serializers.ModelSerializer):
