@@ -4,16 +4,16 @@ from rest_framework import serializers
 
 from ..models import Barrel, Invoice, InvoiceLine, Provider
 
-
 class ProviderSerializer(serializers.ModelSerializer):
-    has_barrels_to_bill = serializers.BooleanField(read_only=True)
-
+    
+    liters_to_bill = serializers.SerializerMethodField()
+    
     class Meta:
         model = Provider
-        fields = ["id", "name", "address", "tax_id", "has_barrels_to_bill"]
-
-    def get_has_barrels_to_bill(self, obj: Provider) -> bool:
-        return obj.has_barrels_to_bill()
+        fields = ["id", "name", "address", "tax_id", "liters_to_bill"]
+        
+    def get_liters_to_bill(self, obj: Provider) -> float:
+        return obj.liters_to_bill()
 
 
 class ProviderDetailSerializer(ProviderSerializer):
