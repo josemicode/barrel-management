@@ -1,7 +1,8 @@
-from decimal import Decimal
-
+from decimal import Decimal, Overflow
+from mailbox import Error
+from typing import override
+from django.utils.translation import override
 from rest_framework import serializers
-
 from ..models import Barrel, Invoice, InvoiceLine, Provider
 
 class ProviderSerializer(serializers.ModelSerializer):
@@ -58,8 +59,15 @@ class InvoiceLineCreateSerializer(serializers.Serializer):
 
     def create(self, validated_data: dict) -> InvoiceLine:
         invoice = self.context["invoice"]
+        barrel: Barrel = validated_data["barrel"]
+
+        if barrel.billed:
+            raise serializers.ValidationError(
+                {"barrel": "Oops... barrel already billed!"}
+            )
+
         return invoice.add_line_for_barrel(
-            barrel=validated_data["barrel"],
+            barrel=barrel,
             liters=validated_data["liters"],
             unit_price_per_liter=validated_data["unit_price"],
             description=validated_data["description"],
