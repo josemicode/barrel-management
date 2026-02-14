@@ -1,28 +1,34 @@
 from decimal import Decimal, Overflow
 from mailbox import Error
 from typing import override
-
 from django.utils.translation import override
 from rest_framework import serializers
-
 from ..models import Barrel, Invoice, InvoiceLine, Provider
 
-
 class ProviderSerializer(serializers.ModelSerializer):
+    
+    liters_to_bill = serializers.SerializerMethodField()
+    
     class Meta:
         model = Provider
-        fields = ["id", "name", "address", "tax_id", "has_barrels_to_bill"]
-
-        def has_barrels_to_bill(self, obj: Provider) -> bool:
-            return obj.has_barrels_to_bill
+        fields = ["id", "name", "address", "tax_id", "liters_to_bill"]
+        
+    def get_liters_to_bill(self, obj: Provider) -> float:
+        return obj.liters_to_bill()
 
 
 class ProviderDetailSerializer(ProviderSerializer):
-    # devuelve SOLO los ids de los barrel relacionados
-    barrels = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    billed_barrels = serializers.SerializerMethodField()
+    barrels_to_bill = serializers.SerializerMethodField()
 
     class Meta(ProviderSerializer.Meta):
-        fields = ProviderSerializer.Meta.fields + ["barrels"]
+        fields = ProviderSerializer.Meta.fields + ["billed_barrels", "barrels_to_bill"]
+
+    def get_billed_barrels(self, obj) -> list[int]:
+        return obj.barrels.filter(billed=True).values_list("id", flat=True)
+
+    def get_barrels_to_bill(self, obj) -> list[int]:
+        return obj.barrels.filter(billed=False).values_list("id", flat=True)
 
 
 class BarrelSerializer(serializers.ModelSerializer):
@@ -76,5 +82,5 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = ["id", "invoice_no", "issued_on", "lines", "total_amount"]
 
-    def get_total_amount(self, obj) -> Decimal:
-        return sum(line.liters * line.unit_price for line in obj.lines.all())
+    def get_total_amount(self, obj) -> int:
+        return obj.calculate_total()
