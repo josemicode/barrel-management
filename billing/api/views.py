@@ -30,7 +30,8 @@ class BarrelViewSet(viewsets.ModelViewSet):
     queryset = Barrel.objects.select_related("provider").all().order_by("id")
     serializer_class = BarrelSerializer
     # Requirement: barrels endpoint without filters on billed/unbilled
-    filter_backends = []
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["oil_type"]
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
