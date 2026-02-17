@@ -50,6 +50,8 @@ class Invoice(models.Model):
     
     invoice_no = models.CharField(max_length=64, unique=True)
     issued_on = models.DateField()
+    
+    provider = models.ForeignKey(Provider, related_name="invoices", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
         return self.invoice_no
@@ -65,6 +67,14 @@ class Invoice(models.Model):
         unit_price_per_liter: Decimal,
         description: str,
     ) -> "InvoiceLine":
+        
+        if barrel.provider != self.provider:
+            raise ValueError(
+                f"Cannot add barrel {barrel.number}: "
+                f"it belongs to provider '{barrel.provider.name}', "
+                f"but the invoice is for '{self.provider.name}'."
+            )
+            
         if liters <= 0:
             raise ValueError("liters must be > 0")
         if unit_price_per_liter <= 0:
