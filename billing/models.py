@@ -3,12 +3,14 @@ from __future__ import annotations
 from decimal import Decimal
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
+from random import choices
+from tokenize import Number
 
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 
+
 class BarrelQuerySet(models.QuerySet):
-    
     def unbilled(self):
         return self.annotate(
             total_billed_liters=Coalesce(Sum('invoice_lines__liters'), Value(0))
@@ -16,27 +18,33 @@ class BarrelQuerySet(models.QuerySet):
 
     def total_liters(self) -> float:
         result = self.aggregate(total=Coalesce(Sum('liters'), Value(0)))
-        return float(result['total'])
+        return float(result['total'] or 0)
 
 
 class Provider(models.Model):
-    
     name = models.CharField(max_length=255)
     address = models.TextField()
     tax_id = models.CharField(max_length=64)
 
     def __str__(self) -> str:
         return f"{self.name} ({self.tax_id})"
-    
+
     def liters_to_bill(self) -> float:
         return self.barrels.unbilled().total_liters()
-      
+
 
 class Barrel(models.Model):
-    
-    provider = models.ForeignKey(Provider, related_name="barrels", on_delete=models.CASCADE)
+    class OilType(models.TextChoices):
+        EVOO = "EVOO", "Extra Virgin Olive Oil"
+        EVO = "EVO", "Virgin Olive Oil"
+        ROO = "ROO", "Refined Olive Oil"
+        OPO = "OPO", "Olive Pomace Oil"
+
+    provider = models.ForeignKey(
+        Provider, related_name="barrels", on_delete=models.CASCADE
+    )
     number = models.CharField(max_length=64)
-    oil_type = models.CharField(max_length=128)
+    oil_type = models.CharField(max_length=128, choices=OilType.choices)
     liters = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     billed = models.BooleanField(default=False)
 
@@ -57,9 +65,10 @@ class Barrel(models.Model):
         return self.total_billed_liters() >= self.liters
 
 class Invoice(models.Model):
-    
     invoice_no = models.CharField(max_length=64, unique=True)
     issued_on = models.DateField()
+    
+    provider = models.ForeignKey(Provider, related_name="invoices", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
         return self.invoice_no
@@ -76,6 +85,13 @@ class Invoice(models.Model):
         description: str,
     ) -> "InvoiceLine":
         
+        if barrel.provider != self.provider:
+            raise ValueError(
+                f"Cannot add barrel {barrel.number}: "
+                f"it belongs to provider '{barrel.provider.name}', "
+                f"but the invoice is for '{self.provider.name}'."
+            )
+            
         if liters <= 0:
             raise ValueError("liters must be > 0")
         
@@ -98,7 +114,6 @@ class Invoice(models.Model):
         
 
 class InvoiceLine(models.Model):
-    
     invoice = models.ForeignKey(Invoice, related_name="lines", on_delete=models.CASCADE)
     barrel = models.ForeignKey(Barrel, related_name="invoice_lines", on_delete=models.PROTECT)
     liters = models.PositiveIntegerField(validators=[MinValueValidator(1)])
