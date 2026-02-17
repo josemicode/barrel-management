@@ -1,24 +1,24 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from django.db.models import Sum, Value
-from django.db.models.functions import Coalesce
 from random import choices
 from tokenize import Number
 
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 
 
 class BarrelQuerySet(models.QuerySet):
     def unbilled(self):
         return self.annotate(
-            total_billed_liters=Coalesce(Sum('invoice_lines__liters'), Value(0))
+            total_billed_liters=Coalesce(Sum("invoice_lines__liters"), Value(0))
         ).filter(total_billed_liters=0)
 
     def total_liters(self) -> float:
-        result = self.aggregate(total=Coalesce(Sum('liters'), Value(0)))
-        return float(result['total'] or 0)
+        result = self.aggregate(total=Coalesce(Sum("liters"), Value(0)))
+        return float(result["total"] or 0)
 
 
 class Provider(models.Model):
@@ -55,20 +55,23 @@ class Barrel(models.Model):
 
     def __str__(self) -> str:
         return f"Barrel {self.number} ({self.oil_type})"
-    
+
     def total_billed_liters(self) -> int:
-        return self.invoice_lines.aggregate(
-            total=Coalesce(Sum("liters"), Value(0))
-        )["total"]
-    
+        return self.invoice_lines.aggregate(total=Coalesce(Sum("liters"), Value(0)))[
+            "total"
+        ]
+
     def is_totally_billed(self) -> bool:
         return self.total_billed_liters() >= self.liters
+
 
 class Invoice(models.Model):
     invoice_no = models.CharField(max_length=64, unique=True)
     issued_on = models.DateField()
-    
-    provider = models.ForeignKey(Provider, related_name="invoices", on_delete=models.CASCADE)
+
+    provider = models.ForeignKey(
+        Provider, related_name="invoices", on_delete=models.CASCADE, null=True
+    )
 
     def __str__(self) -> str:
         return self.invoice_no
@@ -84,23 +87,23 @@ class Invoice(models.Model):
         unit_price_per_liter: Decimal,
         description: str,
     ) -> "InvoiceLine":
-        
+
         if barrel.provider != self.provider:
             raise ValueError(
                 f"Cannot add barrel {barrel.number}: "
                 f"it belongs to provider '{barrel.provider.name}', "
                 f"but the invoice is for '{self.provider.name}'."
             )
-            
+
         if liters <= 0:
             raise ValueError("liters must be > 0")
-        
+
         if unit_price_per_liter <= 0:
             raise ValueError("unit_price must be > 0")
 
         if barrel.liters != liters:
             raise ValueError("liters must equal barrel.liters to bill the full barrel")
-        
+
         if barrel.is_totally_billed():
             raise ValueError("Barrel is already fully billed")
 
@@ -111,14 +114,18 @@ class Invoice(models.Model):
             unit_price=unit_price_per_liter,
             description=description,
         )
-        
+
 
 class InvoiceLine(models.Model):
     invoice = models.ForeignKey(Invoice, related_name="lines", on_delete=models.CASCADE)
-    barrel = models.ForeignKey(Barrel, related_name="invoice_lines", on_delete=models.PROTECT)
+    barrel = models.ForeignKey(
+        Barrel, related_name="invoice_lines", on_delete=models.PROTECT
+    )
     liters = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     description = models.CharField(max_length=255)
-    unit_price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+    unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))]
+    )
 
     def __str__(self) -> str:
         return f"Line {self.id} ({self.liters} L @ {self.unit_price})"
