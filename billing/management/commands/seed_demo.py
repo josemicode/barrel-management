@@ -24,7 +24,9 @@ class Command(BaseCommand):
             provider=p, number="B-002", oil_type="EVOO", liters=150, billed=False
         )
 
-        inv = Invoice.objects.create(invoice_no="INV-0001", issued_on=date.today())
+        inv = Invoice.objects.create(
+            invoice_no="INV-0001", issued_on=date.today(), provider=p
+        )
         inv.add_line_for_barrel(
             barrel=b1,
             liters=200,
