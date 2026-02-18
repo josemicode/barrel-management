@@ -1,18 +1,20 @@
 from decimal import Decimal, Overflow
 from mailbox import Error
 from typing import override
+
 from django.utils.translation import override
 from rest_framework import serializers
+
 from ..models import Barrel, Invoice, InvoiceLine, Provider
 
+
 class ProviderSerializer(serializers.ModelSerializer):
-    
     liters_to_bill = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Provider
         fields = ["id", "name", "address", "tax_id", "liters_to_bill"]
-        
+
     def get_liters_to_bill(self, obj: Provider) -> float:
         return obj.liters_to_bill()
 
