@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from ..models import Barrel, Invoice, Provider
-from .filters import InvoiceFilter
+from .filters import InvoiceFilter, ProviderFilter
 from .serializers import (
     BarrelSerializer,
     InvoiceLineCreateSerializer,
@@ -20,6 +20,9 @@ class ProviderViewSet(viewsets.ModelViewSet):
     queryset = Provider.objects.all().order_by("id")
     serializer_class = ProviderSerializer
 
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProviderFilter
+    
     def get_serializer_class(self):
         if self.action == "retrieve":
             return ProviderDetailSerializer
